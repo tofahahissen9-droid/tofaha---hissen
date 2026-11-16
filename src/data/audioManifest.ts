@@ -9,44 +9,42 @@ import { SpeakerId } from '../types/game';
  * API key is needed for that line.
  *
  * The recordings are produced once with the same model, the same "Zephyr"
- * prebuilt voice and the same Egyptian-Arabic style prompt that the game
- * already uses (see scripts/generate-audio.ts), so the voice is unchanged.
+ * prebuilt voice and the same Egyptian-Arabic style prompt the game already
+ * uses (see scripts/generate-audio.ts), so the voice stays identical.
  *
- * Adding a new line: run
+ * Adding a line:
  *   npx tsx scripts/generate-audio.ts "<exact narration text>" public/audio/<name>.wav
  * then add the matching entry below.
  */
 
-const normalize = (text: string): string => text.replace(/\s+/g, ' ').trim();
-
 interface LocalAudioRecord {
+  /** Must match the narration text in src/data/gameContent.ts exactly. */
+  text: string;
+  /** Path inside public/, e.g. audio/station1-adam-line1.wav */
   file: string;
   speaker: SpeakerId;
 }
 
 const LOCAL_AUDIO_RECORDS: LocalAudioRecord[] = [
   {
-    // المحطة ١ — أول جملة لآدم في تبويب الشرح
     speaker: 'adam',
     file: 'audio/station1-adam-line1.wav',
-    // النص مطابق حرفيًا لما في src/data/gameContent.ts (المحطة ١، الحوار الأول)
-    ...{
-      text: 'أهلًا بكم عند بوابة عالم الصلاة! لكي ندخل البوابة يجب أن نعرف أولًا ما هي الصلاة ولماذا نصلي.',
-    },
-  } as unknown as LocalAudioRecord & { text: string },
+    // المحطة ١ — أول جملة لآدم في تبويب الشرح (مطابقة حرفيًا لـ gameContent.ts)
+    text: 'أهلًا بكم عند بوابة عالم الصلاة! لكي ندخل البوابة يجب أن نعرف أولًا ما هي الصلاة ولماذا نصلي.',
+  },
 ];
 
+const normalize = (text: string): string => text.replace(/\s+/g, ' ').trim();
+
 const TEXT_TO_FILE = new Map<string, string>(
-  (LOCAL_AUDIO_RECORDS as Array<LocalAudioRecord & { text: string }>).map(
-    (record) => [normalize(record.text), `/${record.file}`]
-  )
+  LOCAL_AUDIO_RECORDS.map((record) => [normalize(record.text), `/${record.file}`])
 );
 
-/** Returns a same-origin URL for a local recording, or null when none exists. */
+/** Returns a same-origin URL for a bundled recording, or null when none exists. */
 export function getLocalAudioPath(text: string): string | null {
   if (!text) return null;
   return TEXT_TO_FILE.get(normalize(text)) ?? null;
 }
 
-/** Number of narration lines that are served locally (no API call). */
+/** Number of narration lines served locally, without any API call. */
 export const LOCAL_AUDIO_COUNT = TEXT_TO_FILE.size;
