@@ -1,4 +1,5 @@
 import { SpeakerId } from '../types/game';
+import { getLocalAudioPath } from '../data/audioManifest';
 
 export interface SpeechSegment {
   text: string;
@@ -21,6 +22,7 @@ class AudioEngine {
   private readonly MAX_PREFETCH_WORKERS = 3;
   private prefetchPausedUntil = 0;
   private lastFetchErrorCode: string | null = null;
+  private localAudioCache = new Map<string, boolean>();
 
   private speakingListeners = new Set<
     (state: { speaker: SpeakerId | null; playId: string | null }) => void
@@ -299,6 +301,25 @@ class AudioEngine {
     return URL.createObjectURL(blob);
   }
 
+  /**
+   * Local recordings live in public/audio and are served by our own server.
+   * A missing file must never break playback, so the result is cached and the
+   * caller falls back to the online voice when the file is absent.
+   */
+  private async localAudioExists(path: string): Promise<boolean> {
+    const known = this.localAudioCache.get(path);
+    if (known !== undefined) return known;
+    try {
+      const res = await fetch(path, { method: 'HEAD' });
+      const ok = res.ok;
+      this.localAudioCache.set(path, ok);
+      return ok;
+    } catch {
+      this.localAudioCache.set(path, false);
+      return false;
+    }
+  }
+
   private fetchAudioUrl(
     text: string,
     speaker: SpeakerId
@@ -318,6 +339,14 @@ class AudioEngine {
 
     const promise = (async () => {
       try {
+        // Prefer the bundled recording: it plays without Gemini and without a key.
+        const localPath = getLocalAudioPath(clean);
+        if (localPath && (await this.localAudioExists(localPath))) {
+          this.lastFetchErrorCode = null;
+          this.readyBlobUrls.set(key, localPath);
+          return localPath;
+        }
+
         const response = await fetch('/api/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
