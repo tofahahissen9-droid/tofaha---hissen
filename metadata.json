@@ -1,0 +1,6 @@
+{
+  "name": "رحلة أبطال الصلاة والكنز المفقود",
+  "description": "لعبة تعليمية تفاعلية للأطفال لتعلم معنى الصلاة والوضوء والصلوات الخمس خطوة بخطوة في مغامرة ممتعة مع آدم ونور.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
